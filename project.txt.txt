@@ -2,9 +2,7 @@
 A = importing of dataset 
 */
 
-proc import DATAFILE = "/home/u63273011/AN PROJECT ON SAS/Weight_loss (1).xlsx"
-	DBMS = xlsx
-	OUT = WLO;
+
 run;
 
 
