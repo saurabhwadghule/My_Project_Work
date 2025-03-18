@@ -1,0 +1,256 @@
+#Import data
+
+#plotting nework, forest plot and SUCRA
+#1. Conversion - HR to calculate Log HR
+#                CI to calculate SE for log HR
+
+# Convert Hazard Ratios (HR) to Log Hazard Ratios (lnHR):
+
+efficacy <- Efficacy  
+
+#Activate the library
+library(netmeta)
+library(dplyr)
+library(tidyverse)
+library(dplyr)
+
+#change name of column
+attach(efficacy)
+efficacy <- efficacy %>% 
+  rename(Analysis =`BICR Assessed`)
+
+#data modification for analysis
+efficacy$logHR <- log(efficacy$HR)
+
+#logHR column generated
+glimpse(efficacy$logHR)
+
+# Calculate Standard Errors (SE) for Log Hazard Ratios:
+efficacy$SE_lnHR <- (log(`Higher CI`) - log(`Lower CI`)) / (2 * 1.96) #need to chek this
+
+#SE_lnHR column generated
+glimpse(efficacy)
+summary(logHR)
+summary(SE_lnHR)
+
+#-------------------------------------
+#2. before starting ploting data, i want to add column number patient in each arm "n"
+#-------------------------------------
+# rename study names
+#efficacy <- efficacy %>%
+#  mutate(Study = recode(Study,
+#                        "SOLO-1" = "Moore 2018",
+#                        "PRIMA" = "Martín 2019",
+#                        "PRIME" =  "Li 2023",
+#                        "ATHENA-MONO" = "Monk 2021"))
+
+
+efficacy <- efficacy %>%
+  mutate(n1 = ifelse(Study == "SOLO-1", 260,
+                     ifelse(Study == "PRIMA", 484,
+                            ifelse(Study == "PRIME", 255,
+                                   ifelse(Study == "ATHENA-MONO", 425, NA_integer_)))),
+         n2 = ifelse(Study == "SOLO-1", 131,
+                     ifelse(Study == "PRIMA", 244,
+                            ifelse(Study == "PRIME", 129,
+                                   ifelse(Study == "ATHENA-MONO", 110, NA_integer_)))))
+
+# rename the treatments
+efficacy <- efficacy %>%
+  mutate(treatment = ifelse(Study == "SOLO-1", "Olaparib",
+                            ifelse(Study == "PRIMA", "Niraparib",
+                                   ifelse(Study == "PRIME", "Niraparib",
+                                          ifelse(Study == "ATHENA-MONO", "Rucaparib", NA_integer_)))))
+
+
+#change name of some columns
+colnames(efficacy) <- c("Study", "total", "Outcome", "Subgroup", "treatment", "placebo", "HR", 
+                        "Lower_CI", "Higher_CI", "Analysis", "logHR", "SE_lnHR", "n1", "n2")
+
+
+#------------------------------------------------
+#3. PFS in overall population (Investigator assessed)
+#------------------------------------------------
+#a. PFS in overall population
+#Seperate the data for PFS in overall population 
+#(Data manipulation)
+
+##(Outcome = "PFS", Subgroup = "Overall population" Analysis type == Investigator Assessed)
+#creat object to network plot and forest plot
+attach(efficacy)
+pfs_o <- efficacy %>% 
+  select(Study, Outcome, treatment, n1, placebo, n2, logHR, SE_lnHR) %>% 
+  filter(Outcome == "PFS", Subgroup == "Overall population", Analysis == "Investigator Assessed") %>% 
+  view()
+
+help("netmeta")
+#we can do by using netmeaa
+attach(pfs_o)
+net1 <- netmeta(logHR, SE_lnHR, treatment, placebo, studlab = Study, sm = "HR", data = pfs_o, common = FALSE,
+                subset = treatment %in% c("Ola", "Nira", "Ruca") & placebo == "Placebo",
+                reference.group = "Placebo")
+
+print(summary(net1),
+      truncate = net1$studlab %in% c("SOLO-1", "PRIMA", "PRIME", "ATHENA-MONO"),
+      reference.group = "", all.treatments = TRUE, nchar.trts = 4, methods = "I")
+
+#plot network
+update.packages("netmeta")
+
+#help("netgraph")
+
+#netgraph(net1)
+tmp <- netgraph(net0)
+names(tmp$nodes)
+tmp$nodes$trts 
+
+#--------------------------------------------------
+#forest(net1, 
+#       reference.group = "Placebo", drop.reference.group = TRUE, pooled = ifelse(net1$random, "random"),
+#       label.left = "Favours Intervention", label.right = "Favours Placebo",
+#       leftlabs = "Compared with Placebo",
+#       rightcols = c("effect", "ci"), rightlabs = c("HR", "95% CI"),
+#       small.values = "desirable",
+#       smlab = "PFS in Overall Population")
+
+#---------------------------------------------------
+#SUCRA
+rankogram(net1, cumulative.rankprob = TRUE)
+netrank(net1, method = "SUCRA")
+
+netleague(net1)
+#Ola                    .                    . 0.300 [0.194; 0.465]
+#0.543 [0.322; 0.916]                 Nira                    . 0.552 [0.415; 0.735]
+#0.577 [0.314; 1.060] 1.062 [0.638; 1.769]                 Ruca 0.520 [0.341; 0.793]
+#0.300 [0.194; 0.465] 0.552 [0.415; 0.735] 0.520 [0.341; 0.793]              Placebo
+# lower traianle shoes direct evidance and results from network indirect comparison
+# upper trianle shows only direct evidance from studies
+
+#-----------------------------------------------------
+#pairwise comparison, multiarm study 
+data.frame(arms = p <- 2:5, comps = choose(p, 2), df = p-1)
+
+# arms comps df
+#1    2     1  1
+#2    3     3  2
+#3    4     6  3
+#4    5    10  4
+#for 4 treatments (4 arms), there is 3 independent comparison 3 dependent comparison (df) = 6 pairwise comparison
+
+
+#------------------------------------------------
+#4. PFS in overall population (BICR assessed)
+#------------------------------------------------
+##(Outcome = "PFS", Subgroup = "Overall population" Analysis type == BICR Assessed)
+#creat object to network plot and forest plot
+attach(efficacy)
+pfs_o2 <- efficacy %>% 
+  select(Study, Outcome, treatment, n1, placebo, n2, logHR, SE_lnHR) %>% 
+  filter(Outcome == "PFS", Subgroup == "Overall population", Analysis == "BICR Assessed") %>% 
+  view()
+
+help("netmeta")
+#create object using netmeta
+attach(pfs_o2)
+net2 <- netmeta(logHR, SE_lnHR, treatment, placebo, studlab = Study, sm = "HR", data = pfs_o2, common = FALSE,
+                reference.group = "Placebo")
+
+#network plot
+netgraph(net2,
+         points = TRUE,
+         points.max = 1,
+         points.min = 4,
+         plastic = FALSE,
+         scale = 0.7,
+         thickness = "w.random",
+         number.of.studies = TRUE,
+         pch.points = 16,
+         col.points = "RED",
+         cex.number.of.studies = 0.8,
+         cex = 1.2,
+         offset = 0.099)
+
+#forest plot
+forest(net2,
+       sortvar = -sucra,
+       pooled = ifelse(net1$random, 3, 1),
+       rightcols = c("effect", "ci"),
+       reference.group = "Placebo",
+       drop.reference.group = TRUE,
+       smlab = "PFS in 
+Overall Population",
+       label.left = "Favours Intervention",
+       leftlabs = "Compared with Placebo",
+       rightlabs = c("HR", "95% CI"),
+       xlim = c(0.2, 1),
+       small.values = "desirable")
+
+#SUCRA
+rankogram(net2, cumulative.rankprob = TRUE)
+netrank(net2, method = "SUCRA")
+
+netleague(net2)
+#League table (random effects model):
+  
+#  Olaparib                       .                       . 0.2800 [0.1770; 0.4429]
+#0.5290 [0.3092; 0.9051]               Niraparib                       . 0.5293 [0.4002; 0.7001]
+#0.5957 [0.3197; 1.1101] 1.1262 [0.6795; 1.8665]               Rucaparib 0.4700 [0.3086; 0.7159]
+#0.2800 [0.1770; 0.4429] 0.5293 [0.4002; 0.7001] 0.4700 [0.3086; 0.7159]                 Placebo
+
+
+#------------------------------------------------
+#5. OS in overall population
+#------------------------------------------------
+##(Outcome = "PFS", Subgroup = "Overall population")
+#creat object to network plot and forest plot
+
+#solo has brca1 and brca 2
+attach(efficacy)
+os <- efficacy %>% 
+  select(Study, Outcome, treatment, n1, placebo, n2, logHR, SE_lnHR) %>% 
+  filter(Outcome == "OS", Subgroup == "Overall population")
+
+#create object using netmeta
+attach(os)
+net3 <- netmeta(logHR, SE_lnHR, treatment, placebo, studlab = Study, sm = "HR", data = os, common = FALSE
+                ,reference.group = "Placebo")
+
+#network plot
+netgraph(net3,
+         points = TRUE,
+         points.max = 1,
+         points.min = 4,
+         plastic = FALSE,
+         scale = 0.7,
+         thickness = "w.random",
+         number.of.studies = TRUE,
+         pch.points = 16,
+         col.points = "RED",
+         cex.number.of.studies = 0.8,
+         cex = 1.2,
+         offset = 0.099)
+
+#forest plot
+forest(net2,
+       sortvar = -sucra,
+       pooled = ifelse(net1$random, 3, 1),
+       rightcols = c("effect", "ci"),
+       reference.group = "Placebo",
+       drop.reference.group = TRUE,
+       smlab = "OS in 
+Overall Population",
+       label.left = "Favours Intervention",
+       leftlabs = "Compared with Placebo",
+       rightlabs = c("HR", "95% CI"),
+       xlim = c(0.2, 1),
+       small.values = "desirable")
+
+#SUCRA
+rankogram(net3, cumulative.rankprob = TRUE)
+netrank(net3, method = "SUCRA")
+netleague(net3)
+#League table (random effects model):
+
+#Niraparib                       . 0.6667 [0.4749; 0.9359]
+#0.7018 [0.3937; 1.2509]                Olaparib 0.9500 [0.5949; 1.5170]
+#0.6667 [0.4749; 0.9359] 0.9500 [0.5949; 1.5170]                 Placebo
