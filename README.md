@@ -1,12 +1,11 @@
 
-# This is my SAS Project
+"SAS Project: Uncovering Trends in Patient Data 📊"
 
-In this project, I conducted a trend analysis for a patient group by importing and checking the data for errors, manipulating the data using ARRAY, IF-THEN, and DO statements as per the needs.
+In this project, I explored patient trends by diving deep into data processing and analysis using SAS. Starting with data import and quality checks, I refined the dataset with ARRAY, IF-THEN, and DO statements to ensure accuracy and consistency.
 
-I then used PROC FREQ and PROC SGPLOT procedures to derive outcomes. Specifically, I compared the number of walking steps per day with the weight reduction of participants after one month and two months of starting the study. 
+Next, I leveraged PROC FREQ and PROC SGPLOT to uncover patterns, focusing on how daily walking steps influence weight reduction over one and two months. The findings offer intriguing insights into the connection between physical activity and weight loss—helping to quantify just how much movement makes a difference!
 
-The results of this analysis provide valuable insights into the relationship between physical activity and weight loss.
-
+A hands-on journey into data-driven health insights
 
 ## Authors
 
